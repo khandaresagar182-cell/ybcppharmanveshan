@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+
+# Temp/conversion files
+convert-pdf.*
+retry-pages.*
+debug-mupdf.*
+*.mjs
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+npm-debug.log*
