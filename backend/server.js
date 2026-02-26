@@ -121,7 +121,7 @@ async function sendConfirmationEmail(registrationData) {
             : buildConfirmationEmail(registrationData);
 
         const { data, error } = await resend.emails.send({
-            from: 'Pharma Anveshan 2026 <noreply@YOUR-DOMAIN.in>', // CHANGE: Update email domain
+            from: 'Pharma Anveshan 2026 <noreply@ybcppharmaanveshan.in>', // CHANGE: Update email domain
             to: [registrationData.email],
             subject,
             html
@@ -343,7 +343,7 @@ app.get('/api/test-email', async (req, res) => {
 
     try {
         const { data, error } = await resend.emails.send({
-            from: 'Pharma Anveshan 2026 <noreply@YOUR-DOMAIN.in>', // CHANGE: Update email domain
+            from: 'Pharma Anveshan 2026 <noreply@ybcppharmaanveshan.in>', // CHANGE: Update email domain
             to: [email],
             subject: '🧪 Test Email — Pharma Anveshan 2026',
             html: '<h2 style="color:#0d5c2e;">✅ Email is working!</h2><p>This is a test from Pharma Anveshan 2026 backend.</p>'
