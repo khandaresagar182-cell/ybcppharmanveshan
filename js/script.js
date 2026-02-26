@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ──────────────────────────────────────
     // ⚠️ UPDATE THIS after deploying backend to Railway
     // ⚠️ CHANGE THIS: Set this to your Railway/Render backend URL for YBCP Sawantwadi
-    const API_URL = 'https://YOUR-YBCP-BACKEND.up.railway.app';
+    const API_URL = 'https://ybcppharmanveshan-production.up.railway.app';
 
     const regForm = document.getElementById('registrationForm');
     const successModal = document.getElementById('successModal');
