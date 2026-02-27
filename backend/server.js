@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
 const { Resend } = require('resend');
+const ExcelJS = require('exceljs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -324,6 +325,132 @@ app.post('/api/register', async (req, res) => {
             success: false,
             message: 'Something went wrong. Please try again later.'
         });
+    }
+});
+
+// ── Download Registrations as Excel ──
+app.get('/api/registrations/download', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM registrations ORDER BY created_at DESC'
+        );
+
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = 'Pharma Anveshan 2026';
+        workbook.created = new Date();
+
+        const sheet = workbook.addWorksheet('Registrations', {
+            headerFooter: {
+                firstHeader: 'Pharma Anveshan 2026 — Registrations'
+            }
+        });
+
+        // Define columns
+        sheet.columns = [
+            { header: 'Sr. No.', key: 'sr', width: 8 },
+            { header: 'Registration ID', key: 'id', width: 14 },
+            { header: 'Participant Name', key: 'participant_name', width: 28 },
+            { header: 'Email', key: 'email', width: 32 },
+            { header: 'Mobile', key: 'mobile', width: 16 },
+            { header: 'Institute', key: 'institute', width: 35 },
+            { header: 'State', key: 'state', width: 18 },
+            { header: 'District', key: 'district', width: 18 },
+            { header: 'Participation Type', key: 'participation_type', width: 24 },
+            { header: 'Presentation Category', key: 'presentation_category', width: 24 },
+            { header: 'Presentation Title', key: 'presentation_title', width: 35 },
+            { header: 'Abstract', key: 'abstract', width: 40 },
+            { header: 'Practical Application', key: 'practical_application', width: 35 },
+            { header: 'Patent Status', key: 'patent_status', width: 16 },
+            { header: 'Registered At', key: 'created_at', width: 22 }
+        ];
+
+        // Style header row
+        const headerRow = sheet.getRow(1);
+        headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+        headerRow.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF0D5C2E' }
+        };
+        headerRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        headerRow.height = 30;
+
+        // Add data rows
+        result.rows.forEach((row, index) => {
+            const participationType = row.participation_type
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, c => c.toUpperCase());
+
+            const createdAt = row.created_at
+                ? new Date(row.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+                : '';
+
+            sheet.addRow({
+                sr: index + 1,
+                id: row.id,
+                participant_name: row.participant_name,
+                email: row.email,
+                mobile: row.mobile,
+                institute: row.institute,
+                state: row.state || '',
+                district: row.district || '',
+                participation_type: participationType,
+                presentation_category: row.presentation_category || '—',
+                presentation_title: row.presentation_title || '—',
+                abstract: row.abstract || '—',
+                practical_application: row.practical_application || '—',
+                patent_status: row.patent_status || '—',
+                created_at: createdAt
+            });
+        });
+
+        // Style data rows (alternate row colors)
+        for (let i = 2; i <= result.rows.length + 1; i++) {
+            const dataRow = sheet.getRow(i);
+            dataRow.alignment = { vertical: 'top', wrapText: true };
+            if (i % 2 === 0) {
+                dataRow.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFF0F8F0' }
+                };
+            }
+        }
+
+        // Add borders to all cells
+        sheet.eachRow((row) => {
+            row.eachCell((cell) => {
+                cell.border = {
+                    top: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+                    left: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+                    bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+                    right: { style: 'thin', color: { argb: 'FFD0D0D0' } }
+                };
+            });
+        });
+
+        // Auto-filter on header
+        sheet.autoFilter = {
+            from: { row: 1, column: 1 },
+            to: { row: 1, column: 15 }
+        };
+
+        // Freeze header row
+        sheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+        // Set response headers for file download
+        const filename = `Pharma_Anveshan_YBCP_Registrations_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+
+        console.log(`📊 Excel downloaded — ${result.rows.length} registrations`);
+
+    } catch (err) {
+        console.error('❌ Excel download error:', err.message);
+        res.status(500).json({ success: false, message: 'Failed to generate Excel file.' });
     }
 });
 
