@@ -64,10 +64,12 @@ NODE_ENV=production
 - [x] Update event date (16th March)
 - [x] Update venue (Sawami Vivekanand Auditorium)
 - [x] Update backend email templates
-- [ ] Replace logos and images
-- [ ] Update committee members
-- [ ] Update footer contact details
-- [ ] Deploy backend & set `API_URL`
-- [ ] Configure email domain in `server.js`
-- [ ] Set environment variables on Railway
-- [ ] Test registration flow end-to-end
+- [x] Replace logos and images
+- [x] Update committee members
+- [x] Update footer contact details
+- [x] Deploy backend & set `API_URL`
+- [x] Configure email domain in `server.js` → `ybcppharmaanveshan.in`
+- [x] Set environment variables on Railway (DATABASE_URL, NODE_ENV)
+- [x] Custom domain `ybcppharmaanveshan.in` added to Vercel
+- [ ] Configure Resend API key on Railway (for confirmation emails)
+- [ ] Test registration flow end-to-end on live domain
