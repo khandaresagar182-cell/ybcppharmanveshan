@@ -211,6 +211,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Escape' && regModal.classList.contains('active')) closeRegModal();
     });
 
+    // ── Warm up backend when modal opens (prevents Railway cold-start on submit) ──
+    function pingBackend() {
+        fetch(`${API_URL}/`, { method: 'GET' }).catch(() => { }); // Silent ping — we don't care about the result
+    }
+
     // Override inline onclick to also lock body scroll
     document.querySelectorAll('[onclick*="regModal"]').forEach(link => {
         link.removeAttribute('onclick');
@@ -218,6 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             regModal.classList.add('active');
             document.body.style.overflow = 'hidden';
+            // Ping backend to warm it up while user fills the form
+            pingBackend();
             // Close mobile nav if open
             const navLinks = document.querySelector('.nav-links');
             if (navLinks) navLinks.classList.remove('active');
@@ -272,6 +279,41 @@ document.addEventListener('DOMContentLoaded', () => {
         field.focus();
     }
 
+    // ── Fetch with timeout helper ──
+    async function fetchWithTimeout(url, options, timeoutMs = 30000) {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const response = await fetch(url, { ...options, signal: controller.signal });
+            return response;
+        } finally {
+            clearTimeout(id);
+        }
+    }
+
+    // ── Fetch with retry (for cold starts) ──
+    async function fetchWithRetry(url, options, maxRetries = 2) {
+        let lastError;
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                // If retrying, show a warm-up message
+                if (attempt > 1) {
+                    submitBtn.querySelector('span').textContent = `Server waking up… retry ${attempt}/${maxRetries}`;
+                }
+                const response = await fetchWithTimeout(url, options, 30000);
+                return response;
+            } catch (err) {
+                lastError = err;
+                console.warn(`Attempt ${attempt} failed:`, err.message);
+                if (attempt < maxRetries) {
+                    // Wait 3 seconds before retry
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                }
+            }
+        }
+        throw lastError;
+    }
+
     regForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -318,7 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.querySelector('span').textContent = 'Submitting...';
 
         try {
-            const response = await fetch(`${API_URL}/api/register`, {
+            const response = await fetchWithRetry(`${API_URL}/api/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
@@ -342,7 +384,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (err) {
             console.error('Registration error:', err);
-            errorMessage.textContent = 'Network error. Please check your connection and try again.';
+            // Give user a more helpful message based on error type
+            if (err.name === 'AbortError') {
+                errorMessage.textContent = 'The server is taking too long to respond. Please try again in a few seconds.';
+            } else if (!navigator.onLine) {
+                errorMessage.textContent = 'No internet connection. Please check your network and try again.';
+            } else {
+                errorMessage.textContent = 'Could not reach the server. Please try again — the server may be starting up.';
+            }
             errorModal.classList.add('active');
         } finally {
             // Reset button
